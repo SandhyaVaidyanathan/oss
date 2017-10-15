@@ -15,7 +15,11 @@
 
 #include "shm.h"
 
+int spawnedSlaves = 0;
 const int MAXSLAVE = 20;
+
+
+void spawnSlaveProcess(int);
 
 int main(int argc, char const *argv[])
 {
@@ -23,6 +27,11 @@ int main(int argc, char const *argv[])
 	logfile = "log.txt";
 	int option = 0;	
 	int slaveProcess = 0,ztime = 0 ;
+	int shmid;
+
+	pid_t childpid;
+
+
 	if (argc < 2){ // check for valid number of command-line arguments		
   		fprintf(stderr, " %s: Error : Try Executable -h for help \n",argv[0]);		
   	return 1;	
@@ -59,20 +68,20 @@ int main(int argc, char const *argv[])
         	if (optopt == 'l')
         	{
         		fprintf(stderr,"Invalid Usage:");
-        		fprintf(stderr,"Option -%c requires an argument (log filename), continuing with default name log.txt \n", optopt);
+        		fprintf(stderr,"Option -%c requires an argument (log filename). \n", optopt);
         		logfile = "log.txt";
         	}
         	else if (optopt == 's')
         	{
         		fprintf(stderr,"Invalid Usage:");
-        		fprintf(stderr,"Option -%c requires an argument (slave count), continuing with default value 5.\n", optopt);
+        		fprintf(stderr,"Option -%c requires an argument (slave count).\n", optopt);
         		slaveProcess = 5;
         	}
 
         	else if (optopt == 't')
         	{
         		fprintf(stderr,"Invalid Usage:");
-        		fprintf(stderr,"Option -%c requires an argument (execution time), continuing with default value 20.\n", optopt);
+        		fprintf(stderr,"Option -%c requires an argument (execution time).\n", optopt);
         		ztime = 20;
         	}
         	else if (isprint (optopt))
@@ -87,6 +96,21 @@ int main(int argc, char const *argv[])
 		}
 	}	
 
-
+// Open log file 
+FILE *fp = fopen(logfile, "a");
 return 0;
+}
+
+void spawnSlaveProcess(int noOfSlaves)
+{
+	int i;
+	for(i = 0; i < count; i++) 
+	{
+    	printf("Spawning process %d \n.", spawnedSlaves);
+
+    if((childpid = fork()) < 0) {
+      perror("Failed to fork ");
+
+    	}
+	}
 }
