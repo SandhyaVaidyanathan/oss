@@ -30,7 +30,8 @@ int main(int argc, char const *argv[])
 	int option = 0;	
 	int slaveProcess = 0,ztime = 0 ;
 	int shmid;
-
+	shmClock *shinfo;
+	key_t key;
 
 	if (argc < 2){ // check for  command-line arguments		
   		fprintf(stderr, " %s: Error : Try Executable -h for help \n",argv[0]);		
@@ -98,9 +99,33 @@ int main(int argc, char const *argv[])
 	signal(SIGALRM, interruptHandler);
 	alarm(ztime);	
 
+	key = 555;
+	//Create shared memory segment 
+	shmid = shmget(key, 200*sizeof(shinfo), 0744 |IPC_CREAT |IPC_EXCL);
+	if ((shmid == -1) && (errno != EEXIST)) /* real error */
+	{
+		perror("Unable to create shared memory");
+		return -1;
+	}
+	if (shmid == -1)
+	{
+		printf("Shared Memory Already created");
+		return -1;
+	}
+	else
+	{
+		shinfo = (shmClock*)shmat(shmid,NULL,0);
+		if (shinfo == (void*)-1)
+			return -1;
+		// clock initially set to 0
+		shinfo->nsec = 0;
+		shinfo->sec = 0;
+	}
 // Open log file 
 FILE *fp = fopen(logfile, "a");
 	spawnSlaveProcess(slaveProcess);
+
+
 
 return 0;
 }
