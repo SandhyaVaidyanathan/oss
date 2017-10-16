@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/types.h>
-#include <sys/msg.h>
 #include <sys/sem.h>
 #include <getopt.h>
 
@@ -22,6 +21,7 @@ const int ZTIME_DEFAULT = 20;
 const int MAXSLAVE_DEFAULT = 5;
 
 void spawnSlaveProcess(int);
+void interruptHandler(int);
 
 int main(int argc, char const *argv[])
 {
@@ -92,7 +92,11 @@ int main(int argc, char const *argv[])
 
 		}
 
-	}	
+	}
+//signal handling 
+	signal(SIGINT, interruptHandler); 
+	signal(SIGALRM, interruptHandler);
+	alarm(ztime);	
 
 // Open log file 
 FILE *fp = fopen(logfile, "a");
@@ -117,9 +121,27 @@ void spawnSlaveProcess(int noOfSlaves)
     if (childpid == 0)
 	    {
     	//execl user.c
+	    	gpid = getpgrp();
 			printf("exec %d\n",i);    
     	}
     	spawnedSlaves++;
 	}
+}
+
+void interruptHandler(int SIG){
+  signal(SIGQUIT, SIG_IGN);
+  signal(SIGINT, SIG_IGN);
+
+  if(SIG == SIGINT)
+   {
+    fprintf(stderr, "\nCTRL-C encoutered, killing processes\n");
+  	}
+
+  if(SIG == SIGALRM) 
+  {
+    fprintf(stderr, "Master has timed out. killing processes\n");
+  }
+
+	kill(-getpgrp(), SIGQUIT);
 }
 
