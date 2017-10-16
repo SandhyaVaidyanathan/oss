@@ -11,13 +11,15 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/msg.h>
+#include <sys/sem.h>
 #include <getopt.h>
 
 #include "shm.h"
 
 int spawnedSlaves = 0;
-const int MAXSLAVE = 20;
-
+pid_t childpid, gpid;
+const int ZTIME_DEFAULT = 20;
+const int MAXSLAVE_DEFAULT = 5;
 
 void spawnSlaveProcess(int);
 
@@ -29,10 +31,8 @@ int main(int argc, char const *argv[])
 	int slaveProcess = 0,ztime = 0 ;
 	int shmid;
 
-	pid_t childpid;
 
-
-	if (argc < 2){ // check for valid number of command-line arguments		
+	if (argc < 2){ // check for  command-line arguments		
   		fprintf(stderr, " %s: Error : Try Executable -h for help \n",argv[0]);		
   	return 1;	
   	}
@@ -67,22 +67,19 @@ int main(int argc, char const *argv[])
         case '?':
         	if (optopt == 'l')
         	{
-        		fprintf(stderr,"Invalid Usage:");
         		fprintf(stderr,"Option -%c requires an argument (log filename). \n", optopt);
-        		logfile = "log.txt";
+        		//logfile = "log.txt";
         	}
         	else if (optopt == 's')
         	{
-        		fprintf(stderr,"Invalid Usage:");
         		fprintf(stderr,"Option -%c requires an argument (slave count).\n", optopt);
-        		slaveProcess = 5;
+        		//slaveProcess = 5;
         	}
 
         	else if (optopt == 't')
         	{
-        		fprintf(stderr,"Invalid Usage:");
         		fprintf(stderr,"Option -%c requires an argument (execution time).\n", optopt);
-        		ztime = 20;
+        		//ztime = 20;
         	}
         	else if (isprint (optopt))
         	{
@@ -94,23 +91,35 @@ int main(int argc, char const *argv[])
         	return -1;
 
 		}
+
 	}	
 
 // Open log file 
 FILE *fp = fopen(logfile, "a");
+	spawnSlaveProcess(slaveProcess);
+
 return 0;
 }
 
 void spawnSlaveProcess(int noOfSlaves)
 {
 	int i;
-	for(i = 0; i < count; i++) 
+	for(i = 0; i < noOfSlaves; i++) 
 	{
-    	printf("Spawning process %d \n.", spawnedSlaves);
-
-    if((childpid = fork()) < 0) {
-      perror("Failed to fork ");
-
+		
+    	printf("Creating Slave process : %d \n", spawnedSlaves);
+    	childpid = fork();
+    if(childpid < 0) 
+    	{
+      		printf("Failed to fork ");
+      		break;
     	}
+    if (childpid == 0)
+	    {
+    	//execl user.c
+			printf("exec %d\n",i);    
+    	}
+    	spawnedSlaves++;
 	}
 }
+
