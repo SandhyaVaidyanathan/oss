@@ -16,20 +16,21 @@
 #include "shm.h"
 
 int spawnedSlaves = 0;
-pid_t childpid, gpid;
+pid_t childpid;
 int shmid;
 shmClock *shinfo;
 time_t startTime;
+char* arg1;
+
 
 const int ZTIME_DEFAULT = 20;
 const int MAXSLAVE_DEFAULT = 5;
 const int TOTALPROCESS = 100;
-const unsigned long long int NANOSECOND = 1000000000; 
-const int TIMEINC = 40000;
+const unsigned long int NANOSECOND = 1000000000; 
+const int TIMEINC = 100;
 
 void spawnSlaveProcess(int);
 void interruptHandler(int);
-void myClock();
 
 int main(int argc, char const *argv[])
 {
@@ -39,6 +40,8 @@ int main(int argc, char const *argv[])
 	int slaveProcess = 0,ztime = 0 ;
 
 	key_t clock_key, msg_key;
+
+	arg1 = (char*)malloc(40);
 
 	if (argc < 2){ // check for  command-line arguments		
   		fprintf(stderr, " %s: Error : Try Executable -h for help \n",argv[0]);		
@@ -133,24 +136,30 @@ int main(int argc, char const *argv[])
 FILE *fp = fopen(logfile, "a");
 
 	spawnSlaveProcess(slaveProcess);
+
 	// start clock
 	fprintf(stderr, "Starting the clock..\n" );
 	  startTime = time(NULL);
 	  /*This process continues until 2 seconds have passed in the simulated system time, 100 processes
 		in total have been generated or the executable has been running for the maximum time allotted */
-	  while(shinfo->sec < 2  && spawnedSlaves <= TOTALPROCESS && time(NULL) < (startTime + ztime))
+	  while(shinfo->sec < 2  && spawnedSlaves <= TOTALPROCESS)
         {
-            shinfo->nsec = shinfo->nsec + TIMEINC;
-        if (shinfo->nsec > (NANOSECOND - 1))
+        	if ( time(NULL) <(startTime + ztime))
+        	{
+        		shinfo->nsec += TIMEINC;
+        	if (shinfo->nsec > (NANOSECOND - 1))
             {
-            shinfo->nsec = shinfo->nsec - (NANOSECOND - 1);
-            shinfo->sec++;
-            fprintf(stderr,"Seconds: %lu Nanoseconds: %lu\n", shinfo->sec, shinfo->nsec);
+            shinfo->nsec -= (NANOSECOND - 1);
+            	shinfo->sec++;
+            //fprintf(stderr,"Seconds: %lu Nanoseconds: %lu\n", shinfo->sec, shinfo->nsec);
 
-            } 
+            }
+          //  fprintf(stderr,"Seconds: %lu Nanoseconds: %lu\n", shinfo->sec, shinfo->nsec);
+        	}
+ 
         }
 
-
+free(arg1);
 return 0;
 }
 
@@ -167,7 +176,11 @@ void spawnSlaveProcess(int noOfSlaves)
     if (childpid == 0)
 	    {
     	//execl user.c    	
-			fprintf(stderr,"exec %d\n",i);   
+			fprintf(stderr,"exec %d\n",i);  
+			sprintf(arg1, "%d", i);
+			//sprintf(arg2, "%d", ztime); // passing max time
+			//Calling user.c program
+			execl("user", arg1, NULL); 
 
     	}
     	spawnedSlaves++;
@@ -191,22 +204,4 @@ void interruptHandler(int SIG){
 	kill(-getpgrp(), SIGQUIT);
 }
 
-void myClock()
-{
-	while(shinfo->nsec < 2*NANOSECOND)
-	{
 
-		shinfo->nsec = (shinfo->nsec+2000000);
-		shinfo->sec = (shinfo->nsec/NANOSECOND);
-		long nano;
-		nano = shinfo->nsec;
-		if (shinfo->nsec >= NANOSECOND)
-		{
-			nano = shinfo->nsec - NANOSECOND;
-			if(nano == NANOSECOND)
-				nano = 0;
-		}
-		fprintf(stderr, "Seconds: %ld Nanoseconds: %ld \n",shinfo->sec,nano );
-	}
-	fprintf(stderr, "Clock ending after 2 seconds.\n" );
-}
