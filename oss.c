@@ -19,11 +19,13 @@ int spawnedSlaves = 0;
 pid_t childpid, gpid;
 int shmid;
 shmClock *shinfo;
+time_t startTime;
 
 const int ZTIME_DEFAULT = 20;
 const int MAXSLAVE_DEFAULT = 5;
-const int MAXSLAVES = 100;
-const long long int NANOSECOND = 1000000000; 
+const int TOTALPROCESS = 100;
+const unsigned long long int NANOSECOND = 1000000000; 
+const int TIMEINC = 40000;
 
 void spawnSlaveProcess(int);
 void interruptHandler(int);
@@ -106,7 +108,7 @@ int main(int argc, char const *argv[])
 
 	clock_key = 555;
 	//Create shared memory segment 
-	shmid = shmget(key, 20*sizeof(shinfo), 0744 |IPC_CREAT |IPC_EXCL);
+	shmid = shmget(clock_key, 20*sizeof(shinfo), 0744 |IPC_CREAT |IPC_EXCL);
 	if ((shmid == -1) && (errno != EEXIST)) /* real error */
 	{
 		perror("Unable to create shared memory");
@@ -129,13 +131,24 @@ int main(int argc, char const *argv[])
 // Open log file 
 
 FILE *fp = fopen(logfile, "a");
-	fprintf(stderr, "Starting the clock..\n" );
-	myClock();
+
 	spawnSlaveProcess(slaveProcess);
 	// start clock
+	fprintf(stderr, "Starting the clock..\n" );
+	  startTime = time(NULL);
+	  /*This process continues until 2 seconds have passed in the simulated system time, 100 processes
+		in total have been generated or the executable has been running for the maximum time allotted */
+	  while(shinfo->sec < 2  && spawnedSlaves <= TOTALPROCESS && time(NULL) < (startTime + ztime))
+        {
+            shinfo->nsec = shinfo->nsec + TIMEINC;
+        if (shinfo->nsec > (NANOSECOND - 1))
+            {
+            shinfo->nsec = shinfo->nsec - (NANOSECOND - 1);
+            shinfo->sec++;
+            fprintf(stderr,"Seconds: %lu Nanoseconds: %lu\n", shinfo->sec, shinfo->nsec);
 
-
-
+            } 
+        }
 
 
 return 0;
