@@ -68,6 +68,7 @@ int main(int argc, char const *argv[])
 
   	//critical section
   	fprintf(stderr, "critical section entered..");
+  	fprintf(stderr, "Start time: %lu nsec: %lu \n", init_time.sec, init_time.nsec);
 
 
 	return 0;

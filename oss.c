@@ -31,6 +31,7 @@ const int TIMEINC = 100;
 
 void spawnSlaveProcess(int);
 void interruptHandler(int);
+void clearSharedMem();
 
 int main(int argc, char const *argv[])
 {
@@ -160,6 +161,7 @@ FILE *fp = fopen(logfile, "a");
         }
 
 free(arg1);
+clearSharedMem();
 return 0;
 }
 
@@ -201,7 +203,23 @@ void interruptHandler(int SIG){
     fprintf(stderr, "Master has timed out. killing processes\n");
   }
 
-	kill(-getpgrp(), SIGQUIT);
+  	//kill(-getpid(), SIGQUIT);
+	//kill(-getpgrp(), SIGQUIT);
+  kill(-getpgrp(), 9);
+  clearSharedMem();
 }
 
+void clearSharedMem()
+{
+	int error = 0;
+	if(shmdt(shinfo) == -1) {
+		error = errno;
+	}
+	if((shmctl(shmid, IPC_RMID, NULL) == -1) && !error) {
+		error = errno;
+	}
+	if(!error) {
+		return 0;
+	}
+}
 
