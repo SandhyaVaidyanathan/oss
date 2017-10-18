@@ -3,8 +3,9 @@ typedef struct osClock {
     unsigned long nsec;
 }shmClock;
 
-
 typedef struct Msg{
-  
-  char msgText[1000];
+  unsigned long int term_s;
+ unsigned long int term_ns;
+  int process_id;
 } shmMsg;
+

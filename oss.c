@@ -17,11 +17,11 @@
 
 int spawnedSlaves = 0;
 pid_t childpid;
-int shmid;
+int shmid, Mshmid;
 shmClock *shinfo;
+shmMsg *shmsginfo;
 time_t startTime;
 char* arg1;
-
 
 const int ZTIME_DEFAULT = 20;
 const int MAXSLAVE_DEFAULT = 5;
@@ -31,7 +31,8 @@ const int TIMEINC = 100;
 
 void spawnSlaveProcess(int);
 void interruptHandler(int);
-void clearSharedMem();
+void clearSharedMem1();
+void clearSharedMem2();
 
 int main(int argc, char const *argv[])
 {
@@ -111,8 +112,9 @@ int main(int argc, char const *argv[])
 	alarm(ztime);	
 
 	clock_key = 555;
+	msg_key = 666;
 	//Create shared memory segment 
-	shmid = shmget(clock_key, 20*sizeof(shinfo), 0744 |IPC_CREAT |IPC_EXCL);
+	shmid = shmget(clock_key, 20*sizeof(shinfo), 0766 |IPC_CREAT |IPC_EXCL);
 	if ((shmid == -1) && (errno != EEXIST)) /* real error */
 	{
 		perror("Unable to create shared memory");
@@ -132,6 +134,33 @@ int main(int argc, char const *argv[])
 		shinfo->nsec = 0;
 		shinfo->sec = 0;
 	}
+
+
+	//Shared memory for shmmsg
+
+		//Create shared memory segment 
+	Mshmid = shmget(msg_key, 20*sizeof(shmsginfo), 0766 |IPC_CREAT |IPC_EXCL);
+	if ((Mshmid == -1) && (errno != EEXIST)) /* real error */
+	{
+		perror("Unable to create shared memory");
+		return -1;
+	}
+	if (Mshmid == -1)
+	{
+		printf("Shared Memory Already created");
+		return -1;
+	}
+	else
+	{
+		shmsginfo = (shmMsg*)shmat(Mshmid,NULL,0);
+		if (shmsginfo == (void*)-1)
+			return -1;
+		// clock initially set to 0
+		shmsginfo->term_ns = 0;
+		shmsginfo->term_s = 0;
+		shmsginfo->process_id =0;
+	}
+
 // Open log file 
 
 FILE *fp = fopen(logfile, "a");
@@ -161,7 +190,8 @@ FILE *fp = fopen(logfile, "a");
         }
 
 free(arg1);
-clearSharedMem();
+clearSharedMem1();
+clearSharedMem2();
 return 0;
 }
 
@@ -206,10 +236,11 @@ void interruptHandler(int SIG){
   	//kill(-getpid(), SIGQUIT);
 	//kill(-getpgrp(), SIGQUIT);
   kill(-getpgrp(), 9);
-  clearSharedMem();
+  clearSharedMem1();
+  clearSharedMem2();
 }
 
-void clearSharedMem()
+void clearSharedMem1()
 {
 	int error = 0;
 	if(shmdt(shinfo) == -1) {
@@ -219,7 +250,20 @@ void clearSharedMem()
 		error = errno;
 	}
 	if(!error) {
-		return 0;
+		return ;
+	}
+}
+void clearSharedMem2()
+{
+	int error = 0;
+	if(shmdt(shmsginfo) == -1) {
+		error = errno;
+	}
+	if((shmctl(Mshmid, IPC_RMID, NULL) == -1) && !error) {
+		error = errno;
+	}
+	if(!error) {
+		return ;
 	}
 }
 
